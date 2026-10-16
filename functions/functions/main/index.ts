@@ -20,10 +20,11 @@ async function railwayMintKey(role: string): Promise<string> {
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(`${h}.${p}`)))
   return `${h}.${p}.${b64(sig)}`
 }
+const RAILWAY_DERIVED_KEYS: Record<string, string> = {}
 if (JWT_SECRET) {
   try {
-    if (!Deno.env.get('SUPABASE_ANON_KEY')) Deno.env.set('SUPABASE_ANON_KEY', await railwayMintKey('anon'))
-    if (!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', await railwayMintKey('service_role'))
+    if (!Deno.env.get('SUPABASE_ANON_KEY')) RAILWAY_DERIVED_KEYS.SUPABASE_ANON_KEY = await railwayMintKey('anon')
+    if (!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) RAILWAY_DERIVED_KEYS.SUPABASE_SERVICE_ROLE_KEY = await railwayMintKey('service_role')
   } catch (e) { console.error('railway: could not derive API keys', e) }
 }
 
@@ -371,7 +372,7 @@ Deno.serve(async (req: Request) => {
   // SUPABASE_FUNCTION_SLUG is listed after the container env snapshot so
   // nothing in it can shadow the value, and it is per-request because only this
   // worker knows which function the request resolved to.
-  const envVarsObj = { ...Deno.env.toObject(), SUPABASE_FUNCTION_SLUG: service_name }
+  const envVarsObj = { ...RAILWAY_DERIVED_KEYS, ...Deno.env.toObject(), SUPABASE_FUNCTION_SLUG: service_name }
   const envVars = Object.keys(envVarsObj).map((k) => [k, envVarsObj[k]])
 
   const callWorker = async (req: Request, retriesLeft = MAX_WORKER_RETRIES): Promise<Response> => {
