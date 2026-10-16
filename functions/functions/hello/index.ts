@@ -1,37 +1,11 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts"
-import { withSupabase } from "@supabase/server"
-
-// Logs are visible from 'functions' container inspector
-console.log("Hello from Functions!");
-
-// This endpoint uses 'publishable' | 'secret' access, apiKey is required.
-// Use publishable for Client-facing, key-validated endpoints
-// Use secret for Server-to-server, internal calls
-export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    // Called by another service with a secret key
-    // ctx.supabaseAdmin bypasses RLS — use for privileged operations
-    /*
-    if (ctx.authMode === "secret") {
-      const { user_id } = await req.json();
-      const { data } = await ctx.supabaseAdmin.auth.admin.getUserById(user_id);
-
-      return Response.json({
-        email: data?.user?.email,
-      });
-    }
-    */
-
-    return Response.json({ message: "Hello from Edge Functions!" });
-  }),
-};
-
-// To invoke:
-// curl 'http://localhost:<API_GW_HTTP_PORT>/functions/v1/hello' \
-//   --header 'apiKey: <sb_publishable/sb_secret key>'
-
+// Example Edge Function. Call it with your anon key:
+//   curl https://YOUR-DOMAIN/functions/v1/hello -H "Authorization: Bearer ANON_KEY" -d '{"name":"Railway"}'
+// SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_DB_URL are available via Deno.env.
+Deno.serve(async (req: Request) => {
+  let name = 'world'
+  try { name = (await req.json()).name ?? name } catch (_) { /* no body */ }
+  return new Response(
+    JSON.stringify({ message: `Hello ${name}!`, has_anon_key: Boolean(Deno.env.get('SUPABASE_ANON_KEY')) }),
+    { headers: { 'Content-Type': 'application/json' } },
+  )
+})

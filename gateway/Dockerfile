@@ -4,4 +4,4 @@ COPY --chmod=0755 docker-entrypoint.sh /railway-entrypoint.sh
 # config files are rendered at start
 RUN chmod 0777 /etc/envoy
 ENTRYPOINT ["/bin/sh","/railway-entrypoint.sh"]
-CMD []
+CMD ["--log-level","warn"]
