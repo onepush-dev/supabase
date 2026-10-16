@@ -1,0 +1,54 @@
+name: Build images
+
+# Builds the Railway wrapper images (upstream Supabase images pinned by digest + Railway glue)
+# and publishes them to GHCR. The Railway template deploys these images by digest.
+on:
+  push:
+    branches: [main]
+    paths: ["db/**", "gateway/**", "studio/**", "storage/**", "functions/**", ".github/workflows/images.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  RELEASE: "2026.10"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: supabase-db, context: db }
+          - { name: supabase-gateway, context: gateway }
+          - { name: supabase-studio, context: studio }
+          - { name: supabase-storage, context: storage }
+          - { name: supabase-functions, context: functions }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Short SHA
+        id: vars
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}:${{ env.RELEASE }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}:${{ env.RELEASE }}-${{ steps.vars.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=Supabase self-hosted (${{ matrix.name }}) for Railway
+            org.opencontainers.image.licenses=Apache-2.0
