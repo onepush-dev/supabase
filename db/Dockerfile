@@ -10,4 +10,4 @@ COPY sql/pooler.sql     /docker-entrypoint-initdb.d/migrations/99-pooler.sql
 COPY --chown=postgres:postgres --chmod=0755 pgsodium_getkey.sh /usr/lib/postgresql/bin/pgsodium_getkey.sh
 # Railway volume root contains lost+found, so keep PGDATA in a subdirectory
 ENV PGDATA=/var/lib/postgresql/data/pgdata
-CMD ["postgres","-D","/etc/postgresql","-c","config_file=/etc/postgresql/postgresql.conf","-c","log_min_messages=fatal"]
+CMD ["postgres","-D","/etc/postgresql","-c","config_file=/etc/postgresql/postgresql.conf","-c","data_directory=/var/lib/postgresql/data/pgdata","-c","log_min_messages=fatal"]
